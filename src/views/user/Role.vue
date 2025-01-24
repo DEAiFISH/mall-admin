@@ -159,7 +159,6 @@
   }
 
   const fetchRolePermissions = async (roleId: number) => {
-    console.log('checkedKeys', checkedKeys.value)
     const response = await UserService.getRolePermissions({ roleId })
     checkedKeys.value = response.data.map((vo: any) => vo.permissionId)
     allPermissions.value = allPermissions.value.map((i) => {

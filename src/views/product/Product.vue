@@ -1,12 +1,7 @@
 <template>
   <div class="page-content">
-    <table-bar
-      :showTop="false"
-      @search="search"
-      @reset="resetForm(searchFormRef)"
-      @changeColumn="changeColumn"
-      :columns="columns"
-    >
+    <table-bar :showTop="false" @search="search" @reset="resetForm(searchFormRef)" @changeColumn="changeColumn"
+      :columns="columns">
       <template #top>
         <el-form :model="searchForm" ref="searchFormRef" label-width="82px">
           <el-row :gutter="20">
@@ -24,103 +19,50 @@
       <template #default>
         <el-table-column label="商品ID" prop="productId" v-if="columns[0].show" width="80px" />
         <el-table-column label="商品编号" prop="number" v-if="columns[1].show" width="120px" />
-        <el-table-column
-          label="商品名称"
-          prop="name"
-          v-if="columns[2].show"
-          width="200px"
-          show-overflow-tooltip
-        />
-        <el-table-column
-          label="商品价格"
-          prop="price"
-          v-if="columns[3].show"
-          width="120px"
-          sortable
-        />
-        <el-table-column
-          label="商品优惠价"
-          prop="preferentialPrice"
-          v-if="columns[4].show"
-          width="140px"
-          sortable
-        />
-        <el-table-column
-          label="商品库存"
-          prop="stock"
-          v-if="columns[5].show"
-          width="120px"
-          sortable
-        />
-        <el-table-column
-          label="商品销量"
-          prop="sale"
-          v-if="columns[6].show"
-          width="120px"
-          sortable
-        />
-        <el-table-column
-          label="状态"
-          prop="status"
-          :filters="statusFilters"
-          :filter-method="filterTag"
-          filter-placement="bottom-end"
-          v-if="columns[7].show"
-          width="100px"
-        >
+        <el-table-column label="商品名称" prop="name" v-if="columns[2].show" width="200px" show-overflow-tooltip />
+        <el-table-column label="商品价格" prop="price" v-if="columns[3].show" width="120px" sortable />
+        <el-table-column label="商品优惠价" prop="preferentialPrice" v-if="columns[4].show" width="140px" sortable />
+        <el-table-column label="商品库存" prop="stock" v-if="columns[5].show" width="120px" sortable />
+        <el-table-column label="商品销量" prop="sale" v-if="columns[6].show" width="120px" sortable />
+        <el-table-column label="状态" prop="status" :filters="statusFilters" :filter-method="filterTag"
+          filter-placement="bottom-end" v-if="columns[7].show" width="100px">
           <template #default="scope">
             <el-tag :type="getTagType(scope.row.status)">
-              {{ formatStatus(scope.row.status) }}</el-tag
-            >
+              {{ formatStatus(scope.row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column
-          label="分类名称"
-          prop="classifyName"
-          v-if="columns[8].show"
-          width="120px"
-          show-overflow-tooltip
-        />
-        <el-table-column
-          label="品牌名称"
-          prop="brandName"
-          v-if="columns[9].show"
-          width="120px"
-          show-overflow-tooltip
-        />
+        <el-table-column label="分类名称" prop="classifyName" v-if="columns[8].show" width="120px" show-overflow-tooltip />
+        <el-table-column label="品牌名称" prop="brandName" v-if="columns[9].show" width="120px" show-overflow-tooltip />
         <el-table-column label="封面图片" prop="coverPicture" v-if="columns[10].show" width="200px">
           <template #default="scope">
             <el-image :src="scope.row.coverPicture" fit="cover" />
           </template>
         </el-table-column>
-        <el-table-column
-          label="商品简介"
-          prop="briefDescription"
-          v-if="columns[11].show"
-          show-overflow-tooltip
-        />
-        <el-table-column fixed="right" label="操作" width="150px" v-if="columns[10].show">
+        <el-table-column label="商品简介" prop="briefDescription" v-if="columns[11].show" show-overflow-tooltip />
+        <el-table-column fixed="right" label="操作" width="100px">
+          <template #default="scope">
+            <el-row>
+              <button-more :list="[
+                {key: 'label', label: '商品标签'},
+                { key: 'edit', label: '编辑商品' },
+                { key: 'delete', label: '删除商品' }
+              ]" @click="buttonMoreClick($event, scope.row)" />
+            </el-row>
+          </template>
+        </el-table-column>
+        <!-- <el-table-column fixed="right" label="操作" width="150px" v-if="columns[10].show">
           <template #default="scope">
             <button-table type="edit" @click="showDialog('edit', scope.row)" />
             <button-table type="delete" @click="deleteProduct(scope.row)" />
           </template>
-        </el-table-column>
+        </el-table-column> -->
       </template>
     </art-table>
 
-    <el-dialog
-      v-model="dialogVisible"
-      :title="dialogType === 'add' ? '添加商品' : '编辑商品'"
-      width="30%"
-    >
+    <el-dialog v-model="dialogVisible" :title="dialogType === 'add' ? '添加商品' : '编辑商品'" width="30%">
       <el-scrollbar max-height="640px">
         <el-form ref="formRef" :model="detailFormData" :rules="rules" label-width="100px">
-          <el-form-item
-            v-if="dialogType === 'edit'"
-            label="商品ID"
-            prop="productId"
-            :disabled="dialogType === 'edit'"
-          >
+          <el-form-item v-if="dialogType === 'edit'" label="商品ID" prop="productId" :disabled="dialogType === 'edit'">
             <el-input v-model="detailFormData.productId" disabled />
           </el-form-item>
           <el-form-item label="商品编号" prop="number">
@@ -130,50 +72,22 @@
             <el-input v-model="detailFormData.name" />
           </el-form-item>
           <el-form-item label="商品价格" prop="price">
-            <el-input-number
-              v-model="detailFormData.price"
-              :min="0"
-              :max="9999999999"
-              :precision="2"
-            />
+            <el-input-number v-model="detailFormData.price" :min="0" :max="9999999999" :precision="2" />
           </el-form-item>
           <el-form-item label="商品优惠价" prop="preferentialPrice">
-            <el-input-number
-              v-model="detailFormData.preferentialPrice"
-              :min="0"
-              :max="9999999999"
-              :precision="2"
-            />
+            <el-input-number v-model="detailFormData.preferentialPrice" :min="0" :max="9999999999" :precision="2" />
           </el-form-item>
           <el-form-item label="状态" v-if="dialogType === 'edit'">
             <el-switch v-model="detailFormData.status" :active-value="1" :inactive-value="0" />
           </el-form-item>
           <el-form-item label="分类名称" prop="classifyName">
-            <el-select
-              v-model="detailFormData.classifyName"
-              placeholder="请选择分类"
-              @change="handleClassifyChange"
-            >
-              <el-option
-                v-for="item in classifyOptions"
-                :key="item.value"
-                :label="item.label"
-                :value="item.value"
-              />
+            <el-select v-model="detailFormData.classifyName" placeholder="请选择分类" @change="handleClassifyChange">
+              <el-option v-for="item in classifyOptions" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
           </el-form-item>
           <el-form-item label="品牌名称" prop="brandName">
-            <el-select
-              v-model="detailFormData.brandName"
-              placeholder="请选择品牌"
-              @change="handleBrandChange"
-            >
-              <el-option
-                v-for="item in brandOptions"
-                :key="item.value"
-                :label="item.label"
-                :value="item.value"
-              />
+            <el-select v-model="detailFormData.brandName" placeholder="请选择品牌" @change="handleBrandChange">
+              <el-option v-for="item in brandOptions" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
           </el-form-item>
           <el-form-item label="商品简介" prop="briefDescription">
@@ -186,18 +100,10 @@
                         <el-input v-model="detailFormData.coverPicture" />
                     </el-form-item> -->
           <el-form-item label="封面图片" prop="coverPicture">
-            <el-image
-              v-if="detailFormData.coverPicture"
-              :src="detailFormData.coverPicture"
-              fit="cover"
-              @click="selectPicture('coverPicture')"
-            />
-            <el-icon
-              v-else
-              size="40"
-              style="padding: 5px; border: 1px solid #ccc; border-radius: 5px"
-              @click="selectPicture('coverPicture')"
-            >
+            <el-image v-if="detailFormData.coverPicture" :src="detailFormData.coverPicture" fit="cover"
+              @click="selectPicture('coverPicture')" />
+            <el-icon v-else size="40" style="padding: 5px; border: 1px solid #ccc; border-radius: 5px"
+              @click="selectPicture('coverPicture')">
               <Plus />
             </el-icon>
             <!-- <input type="file" ref="fileInputCoverPicture" @change="uploadPicture($event, 'coverPicture')"
@@ -212,14 +118,9 @@
                         <input type="file" ref="fileInputDetailsPicture" @change="uploadPicture($event, 'detailsPicture')"
                             accept="image/*" style="display: inline-block; width: 0; height: 0; opacity: 0;" />
                     </el-form-item> -->
-          <el-upload
-            v-model:file-list="fileList"
-            class="upload-demo"
-            action="https://run.mocky.io/v3/9d059bf9-4660-45f2-925d-ce80ad6c4d15"
-            :on-preview="handlePreview"
-            :on-remove="handleRemove"
-            list-type="picture"
-          >
+          <el-upload v-model:file-list="fileList" class="upload-demo"
+            action="https://run.mocky.io/v3/9d059bf9-4660-45f2-925d-ce80ad6c4d15" :on-preview="handlePreview"
+            :on-remove="handleRemove" list-type="picture">
             <el-button type="primary">点击上传商品详情图片</el-button>
             <template #tip>
               <div class="el-upload__tip"> 文件大小小于500kb 文件格式：jpg/png </div>
@@ -235,17 +136,25 @@
         </div>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="labelDialog" title="商品标签" width="30%">
+      <div :style="{ maxHeight: '500px', overflowY: 'scroll' }">
+        <el-checkbox v-for="item in allLabels" :label="item.name" v-model="item.checked"
+          @change="handleLabelCheck(item, $event)" />
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
+  import { ButtonMoreItem } from '@/components/Form/ButtonMore.vue'
   import { ACCOUNT_TABLE_DATA } from '@/mock/formData'
   import { FormInstance } from 'element-plus'
   import { ElMessageBox, ElMessage } from 'element-plus'
   import type { FormRules } from 'element-plus'
   import { useI18n } from 'vue-i18n'
   import { ProductService } from '@/api/productsApi'
-  import { List } from 'echarts'
+  import { UserService } from '@/api/usersApi'
 
   const { t } = useI18n()
 
@@ -253,6 +162,10 @@
   const dialogVisible = ref(false)
 
   const tableData = ref<any>([])
+  const labelDialog = ref(false)
+  const checkProductId = ref(0)
+  const allLabels = ref<any[]>([])
+  const checkedKeys = ref<number[]>([])
 
   const briefFormData = ref<any>({
     productId: null,
@@ -378,6 +291,52 @@
     if (!formEl) return
     formEl.resetFields()
     fetchAllProduct(searchForm)
+  }
+
+const buttonMoreClick = (item: ButtonMoreItem, row: any) => {
+  checkProductId.value = row.productId
+    if (item.key === 'edit') {
+      showDialog('edit', row)
+    } else if (item.key === 'delete') {
+      deleteProduct(row)
+    } else if (item.key === 'label') {
+      showLabelDialog(row.productId)
+    }
+  }
+
+const showLabelDialog = (productId: number) => {
+  checkProductId.value = productId
+  labelDialog.value = true
+  fetchProductLabel(productId)
+}
+
+  const fetchAllLabels = async () => {
+    const response = await UserService.getLabels({ name: '' })
+    allLabels.value = response.data
+  }
+
+  const fetchProductLabel = async (productId: number) => {
+    const response = await ProductService.fetchProductLabel(productId)
+    checkedKeys.value = response.data.map((vo: any) => vo.labelId)
+    allLabels.value = allLabels.value.map((i) => {
+      if (checkedKeys.value.some((item) => item === i.labelId)) {
+        i.checked = true
+      } else {
+        i.checked = false
+      }
+      return i
+    })
+  }
+
+  const handleLabelCheck = (item: any, checked: any) => {
+    if (checked) {
+      ProductService.addProductLabel({
+        productId: checkProductId.value,
+        labelId: item.labelId
+      })
+    } else {
+      ProductService.deleteProductLabel(checkProductId.value, item.labelId)
+    }
   }
 
   const showDialog = (type: string, row?: any) => {
@@ -547,6 +506,8 @@
     detailFormData.value.brandName = formatBrandName(value)
   }
 
+
+
   const fetchAllProduct = async (params: any) => {
     const response = await ProductService.getProductsBrief(params)
     if (response.success) {
@@ -573,6 +534,7 @@
     fetchAllProduct(searchForm)
     fetchClassify()
     fetchBrand()
+    fetchAllLabels()
   })
 </script>
 

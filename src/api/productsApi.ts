@@ -204,4 +204,29 @@ export class ProductService {
       url: `/product/v1/delete/${productId}`
     })
   }
+
+  // 获取商品标签
+  static fetchProductLabel(productId: number) {
+    return request.get<R>({
+      url: `/product-label/v1/list/product/${productId}`
+    })
+  }
+
+  // 添加商品标签
+  static addProductLabel(params: any) {
+    return request.post<R>({
+      url: '/product-label/v1/add',
+      params: {
+        productId: params.productId,
+        labelId: params.labelId
+      }
+    })
+  }
+
+  // 删除商品标签
+  static deleteProductLabel(pId: number,lId:number) {
+    return request.del<R>({
+      url: `/product-label/v1/delete/${pId}/${lId}`
+    })
+  }
 }
