@@ -111,10 +111,14 @@ export class MallManagementService {
   // 订单发货
   static sendOrder(courierNumber: string, orderId: number) {
     return request.put<R>({
-      url: `/order/v1/send/${orderId}`,
-      params: {
-        courierNumber: courierNumber
-      }
+      url: `/order/v1/send/${orderId}?courierNumber=${courierNumber}`
+    })
+  }
+
+  // 取消订单
+  static cancelOrder(orderId: number) {
+    return request.put<R>({
+      url: `/order/v1/cancel/${orderId}?cancelReason=3`
     })
   }
 }

@@ -1,5 +1,5 @@
 <template>
-  <ul class="card-list" :style="{ marginTop: showWorkTab ? '0' : '10px' }">
+  <!-- <ul class="card-list" :style="{ marginTop: showWorkTab ? '0' : '10px' }">
     <li class="art-custom-card" v-for="(item, index) in dataList" :key="index">
       <span class="des custom-text subtitle">{{ item.des }}</span>
       <CountTo
@@ -19,7 +19,7 @@
       </div>
       <i class="iconfont-sys custom-text" v-html="item.icon"></i>
     </li>
-  </ul>
+  </ul> -->
 </template>
 
 <script setup lang="ts">
@@ -64,25 +64,7 @@
     }
   ])
 
-  // const registerNumber = ref([])
-  const registerNumberData = reactive({
-    x: [],
-    y: []
-  })
 
-  const fetchregisterNumber = async () => {
-    let response = await HomepageService.fetchregisterNumber()
-    if (response.success) {
-      registerNumberData.x = response.data.x
-      registerNumberData.y = response.data.y
-
-      console.log(registerNumberData)
-    }
-  }
-
-  onMounted(() => {
-    fetchregisterNumber()
-  })
 </script>
 
 <style lang="scss" scoped>

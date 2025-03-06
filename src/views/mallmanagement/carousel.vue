@@ -2,7 +2,7 @@
   <div class="page-content">
     <el-row>
       <el-col :xs="24" :sm="12" :lg="6">
-        <el-form-item label="商品名称" prop="productName">
+        <el-form-item label="名称" prop="productName">
           <el-input v-model="searchProductName" placeholder="商品名称"></el-input>
         </el-form-item>
       </el-col>

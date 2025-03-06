@@ -66,7 +66,8 @@
               <button-more
                 :list="[
                   { key: 'more', label: '查看详情' },
-                  { key: 'send', label: '发货', disabled: scope.row.status !== '待发货' }
+                  { key: 'send', label: '订单发货', disabled: scope.row.status !== '待发货' },
+                  { key: 'cancel', label: '取消订单', disabled: scope.row.status !== '待发货' }
                 ]"
                 @click="buttonMoreClick($event, scope.row)"
               />
@@ -496,6 +497,12 @@
         return
       }
       showDialog('send', row)
+    } else if (event.key === 'cancel') {
+      if (event.disabled) {
+        ElMessage.warning('当前状态不能取消')
+        return
+      }
+      cancelOrder(row)
     }
   }
 
@@ -522,6 +529,13 @@
     }
   }
 
+  const cancelOrder = async (row: any) => {
+    let response = await MallManagementService.cancelOrder(row.orderId)
+    if (response.success) {
+      ElMessage.success('取消订单成功')
+      fetchAllOrder()
+    }
+  }
   const search = () => {
     fetchAllOrder()
   }
@@ -557,6 +571,7 @@
       form.cancelReason = row.cancelReason
     } else if (type === 'send') {
       // 发货
+      form.orderId = row.orderId
       form.courierNumber = ''
     }
   }

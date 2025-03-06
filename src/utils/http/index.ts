@@ -60,6 +60,10 @@ axiosInstance.interceptors.response.use(
           ? `${errorMessage} ${EmojiText[500]}`
           : `请求超时或服务器异常！${EmojiText[500]}`
       )
+      if(error.response?.data.code === 'A00008'){
+        // 登录过期,跳转到登录页面
+        window.location.href = '/mall/#/login'
+      }
     }
     return Promise.reject(error)
   }

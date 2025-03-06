@@ -18,6 +18,7 @@
   import { useSettingStore } from '@/store/modules/setting'
   import { SystemThemeEnum } from '@/enums/appEnum'
   import { getCssVariable } from '@/utils/utils'
+  import { HomepageService } from '@/api/homepageApi'
 
   const chartRef = ref<HTMLDivElement>()
   const { setOptions, removeResize, resize } = useECharts(chartRef as Ref<HTMLDivElement>)
@@ -27,6 +28,7 @@
   const isLight = computed(() => theme.value === SystemThemeEnum.LIGHT)
   const settingStore = useSettingStore()
   const menuOpen = computed(() => settingStore.menuOpen)
+  const dataList = ref([])
 
   // 收缩菜单时，重新计算图表大小
   watch(menuOpen, () => {
@@ -37,7 +39,9 @@
   })
 
   onMounted(() => {
-    createChart()
+    getChartData().then(() => {
+      createChart()
+    })
   })
 
   onUnmounted(() => {
@@ -112,7 +116,7 @@
           color: getCssVariable('--main-color'),
           type: 'line',
           stack: '总量',
-          data: [50, 25, 40, 20, 70, 35, 65, 30, 35, 20, 40, 44],
+          data: dataList.value,
           smooth: true,
           symbol: 'none',
           lineStyle: {
@@ -133,6 +137,12 @@
         }
       ]
     })
+  }
+
+  const getChartData = async () => {
+    var year = new Date().getFullYear()
+    const res = await HomepageService.getChartData(year.toString())
+    dataList.value = res.data
   }
 </script>
 

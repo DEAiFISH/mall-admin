@@ -1,5 +1,5 @@
 <template>
-  <div class="region dynamic art-custom-card">
+  <!-- <div class="region dynamic art-custom-card">
     <div class="card-header">
       <div class="title">
         <h4 class="custom-text box-title">动态</h4>
@@ -14,7 +14,7 @@
         <span class="target">{{ item.target }}</span>
       </div>
     </div>
-  </div>
+  </div> -->
 </template>
 
 <script setup lang="ts">

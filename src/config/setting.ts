@@ -12,7 +12,7 @@ export const SystemInfo = {
   name: '二手卡带交易Mall',
   // 登录默认帐号、密码
   login: {
-    username: 'wx_id123',
+    username: 'wx_id123123',
     password: '123123'
   }
 }

@@ -2,11 +2,8 @@
   <div class="region active-user art-custom-card">
     <div class="chart" ref="chartRef"></div>
     <div class="text">
-      <h3 class="custom-text box-title">用户概述</h3>
+      <h3 class="custom-text box-title">用户注册量</h3>
       <p class="custom-text subtitle">比上周 <span>+23%</span></p>
-      <p class="custom-text subtitle"
-        >我们为您创建了多个选项，可将它们组合在一起并定制为像素完美的页面</p
-      >
     </div>
     <div class="list">
       <div v-for="(item, index) in list" :key="index">
@@ -18,11 +15,11 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, onMounted, onUnmounted } from 'vue'
+  import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
   import * as echarts from 'echarts'
   import { useECharts } from '@/utils/echarts/useECharts'
   import { useSettingStore } from '@/store/modules/setting'
-
+  import { HomepageService } from '@/api/homepageApi'
   const chartRef = ref<HTMLDivElement | null>(null)
   const { setOptions, removeResize, resize } = useECharts(chartRef as Ref<HTMLDivElement>)
   const settingStore = useSettingStore()
@@ -39,13 +36,37 @@
 
   const store = useSettingStore()
   const isDark = computed(() => store.isDark)
+  const allHistoryCount = ref(0)
+  const userCount = ref(0)
 
-  const list = [
-    { name: '总用户量', num: '32k' },
-    { name: '总访问量', num: '128k' },
-    { name: '日访问量', num: '1.2k' },
-    { name: '周同比', num: '+5%' }
-  ]
+  const list = ref([
+    { name: '总用户量', num: userCount },
+    { name: '总访问量', num: allHistoryCount }
+  ])
+
+  const getAllHistoryCount = async () => {
+    const res = await HomepageService.getAllHistoryCount()
+    allHistoryCount.value = res.data
+  }
+
+  const getUserCount = async () => {
+    const res = await HomepageService.getUserCount()
+    userCount.value = res.data
+  }
+
+    // const registerNumber = ref([])
+    const registerNumberData = reactive({
+    x: [],
+    y: []
+  })
+
+  const fetchregisterNumber = async () => {
+    let response = await HomepageService.fetchregisterNumber()
+    if (response.success) {
+      registerNumberData.x = response.data.x
+      registerNumberData.y = response.data.y
+    }
+  }
 
   const createChart = () => {
     setOptions({
@@ -81,7 +102,7 @@
       },
       xAxis: {
         type: 'category',
-        data: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+        data: registerNumberData.x,
         boundaryGap: [0, 0.01],
         splitLine: {
           show: false
@@ -101,7 +122,7 @@
       },
       series: [
         {
-          data: [160, 100, 150, 80, 190, 100, 175, 120, 160],
+          data: registerNumberData.y,
           type: 'bar',
           barMaxWidth: 36,
           itemStyle: {
@@ -123,7 +144,13 @@
   }
 
   onMounted(() => {
-    createChart()
+    
+    getUserCount();
+    getAllHistoryCount();
+    fetchregisterNumber().then(() => {
+      createChart()
+    })
+    
   })
 
   onUnmounted(() => {
