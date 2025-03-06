@@ -1,6 +1,5 @@
 import request from '@/utils/http'
 import { R } from '@/types/axios'
-import { BizService } from './bizApi'
 
 export class HomepageService {
   // 用户注册数据
