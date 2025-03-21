@@ -67,7 +67,7 @@
                 :list="[
                   { key: 'more', label: '查看详情' },
                   { key: 'send', label: '订单发货', disabled: scope.row.status !== '待发货' },
-                  { key: 'cancel', label: '取消订单', disabled: scope.row.status !== '待发货' }
+                  // { key: 'cancel', label: '取消订单', disabled: scope.row.status !== '待发货' }
                 ]"
                 @click="buttonMoreClick($event, scope.row)"
               />
