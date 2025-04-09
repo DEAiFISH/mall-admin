@@ -43,8 +43,9 @@
           <template #default="scope">
             <el-row>
               <button-more :list="[
-                {key: 'label', label: '商品标签'},
+                { key: 'label', label: '商品标签' },
                 { key: 'edit', label: '编辑商品' },
+                { key: 'stock', label: '编辑库存' },
                 { key: 'delete', label: '删除商品' }
               ]" @click="buttonMoreClick($event, scope.row)" />
             </el-row>
@@ -143,166 +144,188 @@
           @change="handleLabelCheck(item, $event)" />
       </div>
     </el-dialog>
+
+    <!-- 添加库存编辑对话框 -->
+    <el-dialog v-model="stockDialog" title="编辑库存" width="30%">
+      <el-form ref="stockFormRef" :model="stockFormData" :rules="stockRules" label-width="100px">
+        <el-form-item label="库存量" prop="amount">
+          <el-input-number v-model="stockFormData.amount" :min="0" :max="999999" />
+        </el-form-item>
+        <el-form-item label="告警库存量" prop="warningAmount">
+          <el-input-number v-model="stockFormData.warningAmount" :min="0" :max="999999" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="stockDialog = false">取消</el-button>
+          <el-button type="primary" @click="handleStockSubmit">提交</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-  import { ButtonMoreItem } from '@/components/Form/ButtonMore.vue'
-  import { ACCOUNT_TABLE_DATA } from '@/mock/formData'
-  import { FormInstance } from 'element-plus'
-  import { ElMessageBox, ElMessage } from 'element-plus'
-  import type { FormRules } from 'element-plus'
-  import { useI18n } from 'vue-i18n'
-  import { ProductService } from '@/api/productsApi'
-  import { UserService } from '@/api/usersApi'
+import { ButtonMoreItem } from '@/components/Form/ButtonMore.vue'
+import { ACCOUNT_TABLE_DATA } from '@/mock/formData'
+import { FormInstance } from 'element-plus'
+import { ElMessageBox, ElMessage } from 'element-plus'
+import type { FormRules } from 'element-plus'
+import { useI18n } from 'vue-i18n'
+import { ProductService } from '@/api/productsApi'
+import { UserService } from '@/api/usersApi'
+import { ref, reactive } from 'vue'
 
-  const { t } = useI18n()
+const { t } = useI18n()
 
-  const dialogType = ref('add')
-  const dialogVisible = ref(false)
+const dialogType = ref('add')
+const dialogVisible = ref(false)
 
-  const tableData = ref<any>([])
-  const labelDialog = ref(false)
-  const checkProductId = ref(0)
-  const allLabels = ref<any[]>([])
-  const checkedKeys = ref<number[]>([])
+const tableData = ref<any>([])
+const labelDialog = ref(false)
+const stockDialog = ref(false)
+const checkProductId = ref(0)
+const allLabels = ref<any[]>([])
+const checkedKeys = ref<number[]>([])
 
-  const briefFormData = ref<any>({
-    productId: null,
-    number: '',
-    name: '',
-    price: 0,
-    preferentialPrice: 0,
-    stock: 0,
-    sale: 0,
-    status: 0,
-    classifyId: null,
-    classifyName: '',
-    brandId: null,
-    brandName: '',
-    coverPicture: '',
-    briefDescription: ''
+const briefFormData = ref<any>({
+  productId: null,
+  number: '',
+  name: '',
+  price: 0,
+  preferentialPrice: 0,
+  stock: 0,
+  sale: 0,
+  status: 0,
+  classifyId: null,
+  classifyName: '',
+  brandId: null,
+  brandName: '',
+  coverPicture: '',
+  briefDescription: ''
+})
+
+const detailFormData = ref<any>({
+  productId: null,
+  number: '',
+  name: '',
+  price: 0,
+  preferentialPrice: 0,
+  sale: 0,
+  status: 0,
+  classifyId: null,
+  classifyName: '',
+  brandId: null,
+  brandName: '',
+  coverPicture: '',
+  briefDescription: '',
+  description: '',
+  detailsPicture: new Set()
+})
+
+const statusOptions = [
+  {
+    value: 0,
+    label: '禁用'
+  },
+  {
+    value: 1,
+    label: '启用'
+  }
+]
+
+const statusFilters = [
+  {
+    value: '0',
+    text: '禁用'
+  },
+  {
+    value: '1',
+    text: '启用'
+  }
+]
+
+const formatStatus = (status: string) => {
+  return statusOptions.find((option) => option.value === Number(status))?.label
+}
+
+const columns = reactive([
+  { name: '商品ID', prop: 'productId', show: true },
+  { name: '商品编号', prop: 'number', show: true },
+  { name: '商品名称', prop: 'name', show: true },
+  { name: '商品价格', prop: 'price', show: true },
+  { name: '商品优惠价', prop: 'preferentialPrice', show: true },
+  { name: '商品库存', prop: 'stock', show: true },
+  { name: '商品销量', prop: 'sales', show: true },
+  { name: '状态', prop: 'status', show: true },
+  { name: '分类名称', prop: 'classifyName', show: true },
+  { name: '品牌名称', prop: 'brandName', show: true },
+  { name: '封面图片', prop: 'coverPicture', show: true },
+  { name: '商品简介', prop: 'briefDescription', show: true },
+  { name: '操作', show: true }
+])
+
+const searchFormRef = ref<FormInstance>()
+const searchForm = reactive({
+  name: '',
+  number: '',
+  priceUp: 0,
+  priceDown: 0,
+  preferentialPriceUp: 0,
+  preferentialPriceDown: 0,
+  saleUp: 0,
+  saleDown: 0
+})
+
+const classifyOptions = ref<any>([])
+const brandOptions = ref<any>([])
+
+const fetchClassify = async () => {
+  const response = await ProductService.getClassify({
+    name: ''
   })
+  if (response.success) {
+    classifyOptions.value = response.data.map((item: any) => ({
+      value: item.classifyId,
+      label: item.name
+    }))
+  } else {
+    ElMessage.error('获取分类信息失败')
+  }
+}
 
-  const detailFormData = ref<any>({
-    productId: null,
-    number: '',
-    name: '',
-    price: 0,
-    preferentialPrice: 0,
-    sale: 0,
-    status: 0,
-    classifyId: null,
-    classifyName: '',
-    brandId: null,
-    brandName: '',
-    coverPicture: '',
-    briefDescription: '',
-    description: '',
-    detailsPicture: new Set()
+const fetchBrand = async () => {
+  const response = await ProductService.getBrands({
+    name: ''
   })
-
-  const statusOptions = [
-    {
-      value: 0,
-      label: '禁用'
-    },
-    {
-      value: 1,
-      label: '启用'
-    }
-  ]
-
-  const statusFilters = [
-    {
-      value: '0',
-      text: '禁用'
-    },
-    {
-      value: '1',
-      text: '启用'
-    }
-  ]
-
-  const formatStatus = (status: string) => {
-    return statusOptions.find((option) => option.value === Number(status))?.label
+  if (response.success) {
+    brandOptions.value = response.data.map((item: any) => ({
+      value: item.brandId,
+      label: item.name
+    }))
+  } else {
+    ElMessage.error('获取品牌信息失败')
   }
+}
 
-  const columns = reactive([
-    { name: '商品ID', prop: 'productId', show: true },
-    { name: '商品编号', prop: 'number', show: true },
-    { name: '商品名称', prop: 'name', show: true },
-    { name: '商品价格', prop: 'price', show: true },
-    { name: '商品优惠价', prop: 'preferentialPrice', show: true },
-    { name: '商品库存', prop: 'stock', show: true },
-    { name: '商品销量', prop: 'sales', show: true },
-    { name: '状态', prop: 'status', show: true },
-    { name: '分类名称', prop: 'classifyName', show: true },
-    { name: '品牌名称', prop: 'brandName', show: true },
-    { name: '封面图片', prop: 'coverPicture', show: true },
-    { name: '商品简介', prop: 'briefDescription', show: true },
-    { name: '操作', show: true }
-  ])
-
-  const searchFormRef = ref<FormInstance>()
-  const searchForm = reactive({
-    name: '',
-    number: '',
-    priceUp: 0,
-    priceDown: 0,
-    preferentialPriceUp: 0,
-    preferentialPriceDown: 0,
-    saleUp: 0,
-    saleDown: 0
-  })
-
-  const classifyOptions = ref<any>([])
-  const brandOptions = ref<any>([])
-
-  const fetchClassify = async () => {
-    const response = await ProductService.getClassify({
-      name: ''
-    })
-    if (response.success) {
-      classifyOptions.value = response.data.map((item: any) => ({
-        value: item.classifyId,
-        label: item.name
-      }))
-    } else {
-      ElMessage.error('获取分类信息失败')
-    }
-  }
-
-  const fetchBrand = async () => {
-    const response = await ProductService.getBrands({
-      name: ''
-    })
-    if (response.success) {
-      brandOptions.value = response.data.map((item: any) => ({
-        value: item.brandId,
-        label: item.name
-      }))
-    } else {
-      ElMessage.error('获取品牌信息失败')
-    }
-  }
-
-  const resetForm = (formEl: FormInstance | undefined) => {
-    if (!formEl) return
-    formEl.resetFields()
-    fetchAllProduct(searchForm)
-  }
+const resetForm = (formEl: FormInstance | undefined) => {
+  if (!formEl) return
+  formEl.resetFields()
+  fetchAllProduct(searchForm)
+}
 
 const buttonMoreClick = (item: ButtonMoreItem, row: any) => {
   checkProductId.value = row.productId
-    if (item.key === 'edit') {
-      showDialog('edit', row)
-    } else if (item.key === 'delete') {
-      deleteProduct(row)
-    } else if (item.key === 'label') {
-      showLabelDialog(row.productId)
-    }
+  if (item.key === 'edit') {
+    showDialog('edit', row)
+  } else if (item.key === 'delete') {
+    deleteProduct(row)
+  } else if (item.key === 'label') {
+    showLabelDialog(row.productId)
+  } else if (item.key === 'stock') {
+    showStockDialog(row.productId)
   }
+}
 
 const showLabelDialog = (productId: number) => {
   checkProductId.value = productId
@@ -310,254 +333,301 @@ const showLabelDialog = (productId: number) => {
   fetchProductLabel(productId)
 }
 
-  const fetchAllLabels = async () => {
-    const response = await UserService.getLabels({ name: '' })
-    allLabels.value = response.data
-  }
+const showStockDialog = (productId: number) => {
+  checkProductId.value = productId
+  stockDialog.value = true
+  fetchProductStock(productId)
+}
 
-  const fetchProductLabel = async (productId: number) => {
-    const response = await ProductService.fetchProductLabel(productId)
-    checkedKeys.value = response.data.map((vo: any) => vo.labelId)
-    allLabels.value = allLabels.value.map((i) => {
-      if (checkedKeys.value.some((item) => item === i.labelId)) {
-        i.checked = true
-      } else {
-        i.checked = false
-      }
-      return i
-    })
+const fetchProductStock = async (productId: number) => {
+  const response = await ProductService.getProductStock(productId)
+  console.log("获取商品库存", response)
+  if (response.success) {
+    stockFormData.value = response.data
+  } else {
+    ElMessage.error('获取商品库存失败')
   }
+}
 
-  const handleLabelCheck = (item: any, checked: any) => {
-    if (checked) {
-      ProductService.addProductLabel({
-        productId: checkProductId.value,
-        labelId: item.labelId
-      })
+const fetchAllLabels = async () => {
+  const response = await UserService.getLabels({ name: '' })
+  allLabels.value = response.data
+}
+
+const fetchProductLabel = async (productId: number) => {
+  const response = await ProductService.fetchProductLabel(productId)
+  checkedKeys.value = response.data.map((vo: any) => vo.labelId)
+  allLabels.value = allLabels.value.map((i) => {
+    if (checkedKeys.value.some((item) => item === i.labelId)) {
+      i.checked = true
     } else {
-      ProductService.deleteProductLabel(checkProductId.value, item.labelId)
+      i.checked = false
     }
-  }
-
-  const showDialog = (type: string, row?: any) => {
-    dialogVisible.value = true
-    dialogType.value = type
-
-    if (type === 'edit' && row) {
-      fetchProductDetail(row.productId)
-    } else {
-      detailFormData.value = {}
-      fileList.value = []
-    }
-  }
-
-  const deleteProduct = (row: any) => {
-    ElMessageBox.confirm('确定要删除该商品吗？', '删除商品', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'error'
-    }).then(() => {
-      ProductService.deleteProduct(row.productId)
-      ElMessage.success('删除商品成功')
-      fetchAllProduct(searchForm)
-    })
-  }
-
-  const search = () => {
-    fetchAllProduct(searchForm)
-  }
-
-  const changeColumn = (list: any) => {
-    columns.values = list
-  }
-
-  const filterTag = (value: number, row: any) => {
-    return row.status === statusOptions[value].value
-  }
-
-  const getTagType = (status: number) => {
-    let type: 'success' | 'warning' | 'info' | 'primary' | 'danger' = 'info' // Default type
-    if (status === 1) {
-      type = 'success'
-    } else if (status === 0) {
-      type = 'warning'
-    }
-    return type
-  }
-
-  const rules = reactive<FormRules>({
-    number: [{ required: true, message: '请输入商品编号', trigger: 'blur' }],
-    name: [{ required: true, message: '请输入商品名称', trigger: 'blur' }],
-    price: [{ required: true, message: '请输入商品价格', trigger: 'blur' }],
-    preferentialPrice: [{ required: true, message: '请输入商品优惠价', trigger: 'blur' }],
-    classifyName: [{ required: true, message: '请选择分类', trigger: 'blur' }],
-    brandName: [{ required: true, message: '请选择品牌', trigger: 'blur' }],
-    coverPicture: [{ required: true, message: '请上传封面图片', trigger: 'blur' }],
-    detailsPicture: [{ required: true, message: '请上传商品详情图片', trigger: 'blur' }]
+    return i
   })
+}
 
-  const formRef = ref<FormInstance>()
+const handleLabelCheck = (item: any, checked: any) => {
+  if (checked) {
+    ProductService.addProductLabel({
+      productId: checkProductId.value,
+      labelId: item.labelId
+    })
+  } else {
+    ProductService.deleteProductLabel(checkProductId.value, item.labelId)
+  }
+}
 
-  const handleSubmit = async () => {
-    if (!formRef.value) return
+const showDialog = (type: string, row?: any) => {
+  dialogVisible.value = true
+  dialogType.value = type
 
-    await formRef.value.validate(async (valid) => {
-      if (valid) {
-        if (dialogType.value === 'add') {
-          let response = await ProductService.uploadProductDetailsPicture(
-            fileList.value.map((item: any) => item.raw)
-          )
-          if (response.success) {
-            detailFormData.value.detailsPicture = response.data
-          } else {
-            ElMessage.error('上传商品详情图片失败')
-            return
-          }
-          response = await ProductService.createProduct(detailFormData.value)
-          if (response.success) {
-            ElMessage.success('新增商品成功')
-            fetchAllProduct(searchForm)
-          } else {
-            ElMessage.error('新增商品失败')
-          }
-        } else if (dialogType.value === 'edit') {
-          let response = await ProductService.uploadProductDetailsPicture(
-            fileList.value.filter((item: any) => item.raw !== item.url).map((item: any) => item.raw)
-          )
+  if (type === 'edit' && row) {
+    fetchProductDetail(row.productId)
+  } else {
+    detailFormData.value = {}
+    fileList.value = []
+  }
+}
+
+const deleteProduct = (row: any) => {
+  ElMessageBox.confirm('确定要删除该商品吗？', '删除商品', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'error'
+  }).then(() => {
+    ProductService.deleteProduct(row.productId)
+    ElMessage.success('删除商品成功')
+    fetchAllProduct(searchForm)
+  })
+}
+
+const search = () => {
+  fetchAllProduct(searchForm)
+}
+
+const changeColumn = (list: any) => {
+  columns.values = list
+}
+
+const filterTag = (value: number, row: any) => {
+  return row.status === statusOptions[value].value
+}
+
+const getTagType = (status: number) => {
+  let type: 'success' | 'warning' | 'info' | 'primary' | 'danger' = 'info' // Default type
+  if (status === 1) {
+    type = 'success'
+  } else if (status === 0) {
+    type = 'warning'
+  }
+  return type
+}
+
+const rules = reactive<FormRules>({
+  number: [{ required: true, message: '请输入商品编号', trigger: 'blur' }],
+  name: [{ required: true, message: '请输入商品名称', trigger: 'blur' }],
+  price: [{ required: true, message: '请输入商品价格', trigger: 'blur' }],
+  preferentialPrice: [{ required: true, message: '请输入商品优惠价', trigger: 'blur' }],
+  classifyName: [{ required: true, message: '请选择分类', trigger: 'blur' }],
+  brandName: [{ required: true, message: '请选择品牌', trigger: 'blur' }],
+  coverPicture: [{ required: true, message: '请上传封面图片', trigger: 'blur' }],
+  detailsPicture: [{ required: true, message: '请上传商品详情图片', trigger: 'blur' }]
+})
+
+const formRef = ref<FormInstance>()
+
+const handleSubmit = async () => {
+  if (!formRef.value) return
+
+  await formRef.value.validate(async (valid) => {
+    if (valid) {
+      if (dialogType.value === 'add') {
+        let response = await ProductService.uploadProductDetailsPicture(
+          fileList.value.map((item: any) => item.raw)
+        )
+        if (response.success) {
           detailFormData.value.detailsPicture = response.data
-          detailFormData.value.detailsPicture.push(
-            ...fileList.value
-              .filter((item: any) => item.raw === item.url)
-              .map((item: any) => item.url)
-          )
-          response = await ProductService.updateProduct(detailFormData.value)
-          if (response.success) {
-            ElMessage.success('修改商品成功')
-            fetchAllProduct(searchForm)
-          } else {
-            ElMessage.error('修改商品失败')
-          }
+        } else {
+          ElMessage.error('上传商品详情图片失败')
+          return
+        }
+        response = await ProductService.createProduct(detailFormData.value)
+        if (response.success) {
+          ElMessage.success('新增商品成功')
+          fetchAllProduct(searchForm)
+        } else {
+          ElMessage.error('新增商品失败')
+        }
+      } else if (dialogType.value === 'edit') {
+        let response = await ProductService.uploadProductDetailsPicture(
+          fileList.value.filter((item: any) => item.raw !== item.url).map((item: any) => item.raw)
+        )
+        detailFormData.value.detailsPicture = response.data
+        detailFormData.value.detailsPicture.push(
+          ...fileList.value
+            .filter((item: any) => item.raw === item.url)
+            .map((item: any) => item.url)
+        )
+        response = await ProductService.updateProduct(detailFormData.value)
+        if (response.success) {
+          ElMessage.success('修改商品成功')
+          fetchAllProduct(searchForm)
+        } else {
+          ElMessage.error('修改商品失败')
         }
       }
-    })
-
-    fileList.value = []
-    dialogVisible.value = false
-    formRef.value?.resetFields()
-  }
-
-  const fileInputCoverPicture = ref<HTMLInputElement | null>(null)
-  const fileInputDetailsPicture = ref<HTMLInputElement | null>(null)
-
-  const selectPicture = (type: string) => {
-    if (type === 'coverPicture') {
-      fileInputCoverPicture.value = document.createElement('input')
-      fileInputCoverPicture.value.type = 'file'
-      fileInputCoverPicture.value.accept = 'image/*'
-      fileInputCoverPicture.value.style.display = 'inline-block'
-      fileInputCoverPicture.value.style.width = '0'
-      fileInputCoverPicture.value.style.height = '0'
-      fileInputCoverPicture.value.style.opacity = '0'
-      fileInputCoverPicture.value.addEventListener('change', (event: Event) => {
-        uploadPicture(event, 'coverPicture')
-      })
-      fileInputCoverPicture.value.click()
-    } else if (type === 'detailsPicture') {
-      fileInputDetailsPicture.value?.click()
     }
-  }
-
-  const fileList = ref<any[]>([])
-
-  const handlePreview = (file: any) => {}
-
-  const handleRemove = (file: any, fileList: any) => {
-    fileList.value = fileList.value.filter((item: any) => item.url !== file.url)
-  }
-
-  const uploadPicture = async (event: any, type: string) => {
-    const file = event.target.files[0]
-    const response = await ProductService.uploadProductPicture(file)
-    if (response.success) {
-      ElMessage.success('上传图片成功')
-      if (type === 'coverPicture') {
-        detailFormData.value.coverPicture = response.data[0]
-      }
-    } else {
-      ElMessage.error('上传图片失败')
-    }
-  }
-
-  const formatClassifyName = (value: number) => {
-    return classifyOptions.value.find((item: any) => item.value === value)?.label
-  }
-
-  const formatBrandName = (value: number) => {
-    return brandOptions.value.find((item: any) => item.value === value)?.label
-  }
-
-  const handleClassifyChange = (value: any) => {
-    detailFormData.value.classifyId = value
-    detailFormData.value.classifyName = formatClassifyName(value)
-  }
-
-  const handleBrandChange = (value: any) => {
-    detailFormData.value.brandId = value
-    detailFormData.value.brandName = formatBrandName(value)
-  }
-
-
-
-  const fetchAllProduct = async (params: any) => {
-    const response = await ProductService.getProductsBrief(params)
-    if (response.success) {
-      tableData.value = response.data
-    } else {
-      ElMessage.error('获取商品信息失败')
-    }
-  }
-
-  const fetchProductDetail = async (productId: number) => {
-    const response = await ProductService.getProductsDetail(productId)
-    if (response.success) {
-      detailFormData.value = response.data
-      fileList.value = response.data.detailsPicture.map((item: any) => ({
-        url: item,
-        raw: item
-      }))
-    } else {
-      ElMessage.error('获取商品信息失败')
-    }
-  }
-
-  onMounted(() => {
-    fetchAllProduct(searchForm)
-    fetchClassify()
-    fetchBrand()
-    fetchAllLabels()
   })
+
+  fileList.value = []
+  dialogVisible.value = false
+  formRef.value?.resetFields()
+}
+
+const fileInputCoverPicture = ref<HTMLInputElement | null>(null)
+const fileInputDetailsPicture = ref<HTMLInputElement | null>(null)
+
+const selectPicture = (type: string) => {
+  if (type === 'coverPicture') {
+    fileInputCoverPicture.value = document.createElement('input')
+    fileInputCoverPicture.value.type = 'file'
+    fileInputCoverPicture.value.accept = 'image/*'
+    fileInputCoverPicture.value.style.display = 'inline-block'
+    fileInputCoverPicture.value.style.width = '0'
+    fileInputCoverPicture.value.style.height = '0'
+    fileInputCoverPicture.value.style.opacity = '0'
+    fileInputCoverPicture.value.addEventListener('change', (event: Event) => {
+      uploadPicture(event, 'coverPicture')
+    })
+    fileInputCoverPicture.value.click()
+  } else if (type === 'detailsPicture') {
+    fileInputDetailsPicture.value?.click()
+  }
+}
+
+const fileList = ref<any[]>([])
+
+const handlePreview = (file: any) => { }
+
+const handleRemove = (file: any, fileList: any) => {
+  fileList.value = fileList.value.filter((item: any) => item.url !== file.url)
+}
+
+const uploadPicture = async (event: any, type: string) => {
+  const file = event.target.files[0]
+  const response = await ProductService.uploadProductPicture(file)
+  if (response.success) {
+    ElMessage.success('上传图片成功')
+    if (type === 'coverPicture') {
+      detailFormData.value.coverPicture = response.data[0]
+    }
+  } else {
+    ElMessage.error('上传图片失败')
+  }
+}
+
+const formatClassifyName = (value: number) => {
+  return classifyOptions.value.find((item: any) => item.value === value)?.label
+}
+
+const formatBrandName = (value: number) => {
+  return brandOptions.value.find((item: any) => item.value === value)?.label
+}
+
+const handleClassifyChange = (value: any) => {
+  detailFormData.value.classifyId = value
+  detailFormData.value.classifyName = formatClassifyName(value)
+}
+
+const handleBrandChange = (value: any) => {
+  detailFormData.value.brandId = value
+  detailFormData.value.brandName = formatBrandName(value)
+}
+
+const fetchAllProduct = async (params: any) => {
+  const response = await ProductService.getProductsBrief(params)
+  if (response.success) {
+    tableData.value = response.data
+  } else {
+    ElMessage.error('获取商品信息失败')
+  }
+}
+
+const fetchProductDetail = async (productId: number) => {
+  const response = await ProductService.getProductsDetail(productId)
+  if (response.success) {
+    detailFormData.value = response.data
+    fileList.value = response.data.detailsPicture.map((item: any) => ({
+      url: item,
+      raw: item
+    }))
+  } else {
+    ElMessage.error('获取商品信息失败')
+  }
+}
+
+// 添加库存表单数据
+const stockFormRef = ref<FormInstance>()
+const stockFormData = ref<any>({
+  stockId: null,
+  productId: null,
+  amount: 0,
+  warningAmount: 0
+})
+
+// 添加库存表单验证规则
+const stockRules = reactive<FormRules>({
+  amount: [{ required: true, message: '请输入库存量', trigger: 'blur' }],
+  warningAmount: [{ required: true, message: '请输入告警库存量', trigger: 'blur' }]
+})
+
+// 添加库存提交方法
+const handleStockSubmit = async () => {
+  if (!stockFormRef.value) return
+  
+  await stockFormRef.value.validate(async (valid) => {
+    if (valid) {
+      const response = await ProductService.updateProductStock(stockFormData.value)
+      if (response.success) {
+        ElMessage.success('修改库存成功')
+        stockDialog.value = false
+        fetchAllProduct(searchForm)
+      } else {
+        ElMessage.error('修改库存失败')
+      }
+    }
+  })
+}
+
+onMounted(() => {
+  fetchAllProduct(searchForm)
+  fetchClassify()
+  fetchBrand()
+  fetchAllLabels()
+})
 </script>
 
 <style lang="scss" scoped>
-  .page-content {
-    width: 100%;
-    height: 100%;
+.page-content {
+  width: 100%;
+  height: 100%;
 
-    .user {
-      .avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 6px;
-      }
+  .user {
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 6px;
+    }
 
-      > div {
-        margin-left: 10px;
+    >div {
+      margin-left: 10px;
 
-        .user-name {
-          font-weight: 500;
-          color: var(--art-text-gray-800);
-        }
+      .user-name {
+        font-weight: 500;
+        color: var(--art-text-gray-800);
       }
     }
   }
+}
 </style>

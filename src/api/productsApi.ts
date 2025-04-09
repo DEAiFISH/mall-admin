@@ -229,4 +229,24 @@ export class ProductService {
       url: `/product-label/v1/delete/${pId}/${lId}`
     })
   }
+
+  // 获取商品库存
+  static getProductStock(productId: number) {
+    return request.get<R>({
+      url: `/stock/v1/get/${productId}`
+    })
+  }
+
+  // 更新商品库存
+  static updateProductStock(params: any) {
+    return request.put<R>({
+      url: '/stock/v1/update',
+      params: {
+        stockId: params.stockId,
+        productId: params.productId,
+        amount: params.amount,
+        warningAmount: params.warningAmount
+      }
+    })
+  }
 }
