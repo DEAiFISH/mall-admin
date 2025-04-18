@@ -239,7 +239,7 @@ export const roleRoutes: AppRouteRecordRaw[] = [
         name: 'Classify',
         component: () => import('@views/product/Classify.vue'),
         meta: {
-          title: '分类管理'
+          title: '分类信息'
         }
       },
       {

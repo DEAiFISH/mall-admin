@@ -34,7 +34,7 @@ export const menuData: MenuListType[] = [
         id: 10003,
         path: '/product/classify',
         meta: {
-          title: '分类管理',
+          title: '分类信息',
           title_en: 'classify manguage',
           keepAlive: true
         }
