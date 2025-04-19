@@ -8,11 +8,6 @@
     </div>
     <img class="left-bg" src="@imgs/login/lf_bg.png" />
     <img class="left-img" src="@imgs/login/lf_icon2.png" />
-
-    <!-- <div class="text-wrap">
-      <h1> {{ $t('login.leftView.title') }}11 </h1>
-      <p> {{ $t('login.leftView.subTitle') }}111 </p>
-    </div> -->
   </div>
 </template>
 
