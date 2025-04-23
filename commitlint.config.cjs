@@ -1,9 +1,3 @@
-/**
- * commitlint 配置文件
- * 文档
- * https://commitlint.js.org/#/reference-rules
- * https://cz-git.qbb.sh/zh/guide/
- */
 
 module.exports = {
   // 继承的规则
